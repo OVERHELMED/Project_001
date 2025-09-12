@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Sign Language Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤚 Hand Sign Language Detection</h1>
+            <p>Upload an image of a hand gesture to detect the alphabet letter (A-Z)</p>
+        </header>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📷</div>
+                    <p>Click to upload or drag & drop an image</p>
+                    <input type="file" id="imageInput" accept="image/*" hidden>
+                </div>
+                
+                <div class="preview-section" id="previewSection" style="display: none;">
+                    <h3>Preview:</h3>
+                    <img id="previewImage" alt="Preview">
+                    <button id="predictBtn" class="predict-btn">🔍 Predict Letter</button>
+                </div>
+            </div>
+
+            <div class="result-section" id="resultSection" style="display: none;">
+                <h3>Prediction Result:</h3>
+                <div class="result-card">
+                    <div class="predicted-letter" id="predictedLetter"></div>
+                    <div class="confidence" id="confidence"></div>
+                    <div class="status" id="status"></div>
+                </div>
+                <button id="resetBtn" class="reset-btn">🔄 Try Another Image</button>
+            </div>
+
+            <div class="instructions">
+                <h3>📋 Instructions:</h3>
+                <ul>
+                    <li>Upload a clear image of a hand making a sign language gesture</li>
+                    <li>Make sure your hand is clearly visible and well-lit</li>
+                    <li>The system will detect and predict the alphabet letter (A-Z)</li>
+                    <li>Supported formats: JPG, PNG, GIF</li>
+                </ul>
+            </div>
+        </div>
+
+        <footer>
+            <p>Powered by OpenCV, MediaPipe & Machine Learning</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
