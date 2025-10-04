@@ -3,54 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hand Sign Language Detection</title>
+    <title>Real-time Hand Sign Language Detection</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🤚 Hand Sign Language Detection</h1>
-            <p>Upload an image of a hand gesture to detect the alphabet letter (A-Z)</p>
+            <h1>🤚 Real-time Hand Sign Language Detection</h1>
+            <p>Make hand gestures in front of your camera to detect alphabet letters (A-Z) in real-time</p>
         </header>
 
         <div class="main-content">
-            <div class="upload-section">
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📷</div>
-                    <p>Click to upload or drag & drop an image</p>
-                    <input type="file" id="imageInput" accept="image/*" hidden>
+            <div class="camera-section">
+                <div class="video-container">
+                    <img id="videoStream" src="" alt="Camera Feed" style="display: none;">
+                    <div class="camera-overlay">
+                        <div class="detection-status" id="detectionStatus">Click Start Camera to begin</div>
+                    </div>
                 </div>
                 
-                <div class="preview-section" id="previewSection" style="display: none;">
-                    <h3>Preview:</h3>
-                    <img id="previewImage" alt="Preview">
-                    <button id="predictBtn" class="predict-btn">🔍 Predict Letter</button>
+                <div class="camera-controls">
+                    <button id="startCamera" class="control-btn start-btn">📹 Start Camera</button>
+                    <button id="stopCamera" class="control-btn stop-btn" disabled>⏹️ Stop Camera</button>
+                </div>
+                
+                <div class="camera-info">
+                    <p><strong>🎥 Camera Status:</strong> <span id="cameraStatus">Ready to start</span></p>
+                    <p><strong>🔍 Detection:</strong> <span id="detectionMode">Waiting for activation</span></p>
                 </div>
             </div>
 
-            <div class="result-section" id="resultSection" style="display: none;">
-                <h3>Prediction Result:</h3>
+            <div class="result-section">
+                <h3>Live Detection Results:</h3>
                 <div class="result-card">
-                    <div class="predicted-letter" id="predictedLetter"></div>
-                    <div class="confidence" id="confidence"></div>
-                    <div class="status" id="status"></div>
+                    <div class="predicted-letter" id="predictedLetter">?</div>
+                    <div class="confidence" id="confidence">0%</div>
+                    <div class="status" id="status">Waiting for hand detection...</div>
                 </div>
-                <button id="resetBtn" class="reset-btn">🔄 Try Another Image</button>
             </div>
 
             <div class="instructions">
                 <h3>📋 Instructions:</h3>
                 <ul>
-                    <li>Upload a clear image of a hand making a sign language gesture</li>
-                    <li>Make sure your hand is clearly visible and well-lit</li>
-                    <li>The system will detect and predict the alphabet letter (A-Z)</li>
-                    <li>Supported formats: JPG, PNG, GIF</li>
+                    <li>Click "Start Camera" to begin real-time detection</li>
+                    <li>Make hand gestures in front of your camera</li>
+                    <li>Keep your hand clearly visible and well-lit</li>
+                    <li>The system will detect and predict alphabet letters (A-Z) live</li>
+                    <li>Green bounding box shows detected hand area</li>
+                    <li>Confidence percentage shows prediction accuracy</li>
                 </ul>
             </div>
         </div>
 
         <footer>
-            <p>Powered by OpenCV, MediaPipe & Machine Learning</p>
+            <p>Powered by OpenCV, MediaPipe & Machine Learning | Real-time Detection</p>
         </footer>
     </div>
 

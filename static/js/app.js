@@ -1,148 +1,192 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const uploadArea = document.getElementById('uploadArea');
-    const imageInput = document.getElementById('imageInput');
-    const previewSection = document.getElementById('previewSection');
-    const previewImage = document.getElementById('previewImage');
-    const predictBtn = document.getElementById('predictBtn');
-    const resultSection = document.getElementById('resultSection');
+    const videoStream = document.getElementById('videoStream');
+    const startCameraBtn = document.getElementById('startCamera');
+    const stopCameraBtn = document.getElementById('stopCamera');
+    const detectionStatus = document.getElementById('detectionStatus');
     const predictedLetter = document.getElementById('predictedLetter');
     const confidence = document.getElementById('confidence');
     const status = document.getElementById('status');
-    const resetBtn = document.getElementById('resetBtn');
+    const cameraStatus = document.getElementById('cameraStatus');
+    const detectionMode = document.getElementById('detectionMode');
 
-    // Upload area click handler
-    uploadArea.addEventListener('click', () => {
-        imageInput.click();
-    });
+    let predictionInterval;
+    let isCameraActive = false;
 
-    // File input change handler
-    imageInput.addEventListener('change', handleFileSelect);
+    // Camera control handlers
+    startCameraBtn.addEventListener('click', startCamera);
+    stopCameraBtn.addEventListener('click', stopCamera);
 
-    // Drag and drop handlers
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.classList.add('dragover');
-    });
-
-    uploadArea.addEventListener('dragleave', () => {
-        uploadArea.classList.remove('dragover');
-    });
-
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFile(files[0]);
-        }
-    });
-
-    // Predict button handler
-    predictBtn.addEventListener('click', predictImage);
-
-    // Reset button handler
-    resetBtn.addEventListener('click', resetForm);
-
-    function handleFileSelect(e) {
-        const file = e.target.files[0];
-        if (file) {
-            handleFile(file);
-        }
-    }
-
-    function handleFile(file) {
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            showError('Please select a valid image file.');
-            return;
-        }
-
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            showError('Image size should be less than 5MB.');
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            previewImage.src = e.target.result;
-            previewSection.style.display = 'block';
-            resultSection.style.display = 'none';
-        };
-        reader.readAsDataURL(file);
-    }
-
-    async function predictImage() {
-        const imageData = previewImage.src;
-        if (!imageData) {
-            showError('Please select an image first.');
-            return;
-        }
-
-        // Show loading state
-        predictBtn.disabled = true;
-        predictBtn.innerHTML = '<span class="loading"></span>Predicting...';
-
+    async function startCamera() {
         try {
-            const response = await fetch('/predict', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ image: imageData })
-            });
+            startCameraBtn.disabled = true;
+            startCameraBtn.innerHTML = '<span class="loading"></span>Starting Camera...';
+            detectionStatus.textContent = 'Initializing camera...';
 
+            const response = await fetch('/start_camera');
             const result = await response.json();
 
             if (result.status === 'success') {
-                showResult(result.prediction, result.confidence);
+                isCameraActive = true;
+                startCameraBtn.disabled = true;
+                stopCameraBtn.disabled = false;
+                startCameraBtn.innerHTML = '✅ Camera Active';
+                stopCameraBtn.innerHTML = '⏹️ Stop Camera';
+                detectionStatus.textContent = 'Camera active - Make hand gestures!';
+                
+                // Start video stream
+                videoStream.src = '/video_feed';
+                videoStream.style.display = 'block';
+                
+                // Update camera info
+                cameraStatus.textContent = 'Active';
+                detectionMode.textContent = 'Real-time detection running';
+                
+                // Add visual feedback
+                document.querySelector('.video-container').classList.add('camera-active');
+                
+                // Start polling for predictions
+                startPredictionPolling();
+                
+                showStatus('🎉 Camera started successfully! Ready for hand detection.', 'success');
             } else {
-                showError(result.error || 'Failed to process image.');
+                showStatus('❌ Failed to start camera: ' + result.message, 'error');
+                startCameraBtn.disabled = false;
+                startCameraBtn.innerHTML = '📹 Start Camera';
             }
         } catch (error) {
-            showError('Network error. Please try again.');
-            console.error('Error:', error);
-        } finally {
-            // Reset button state
-            predictBtn.disabled = false;
-            predictBtn.innerHTML = '🔍 Predict Letter';
+            showStatus('🌐 Network error. Please check your connection.', 'error');
+            startCameraBtn.disabled = false;
+            startCameraBtn.innerHTML = '📹 Start Camera';
+            console.error('Error starting camera:', error);
         }
     }
 
-    function showResult(letter, conf) {
-        predictedLetter.textContent = letter;
-        confidence.textContent = `Confidence: ${conf}%`;
-        status.textContent = 'Prediction successful!';
-        status.className = 'status success';
+    async function stopCamera() {
+        try {
+            stopCameraBtn.disabled = true;
+            stopCameraBtn.innerHTML = '<span class="loading"></span>Stopping Camera...';
+
+            const response = await fetch('/stop_camera');
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                isCameraActive = false;
+                startCameraBtn.disabled = false;
+                stopCameraBtn.disabled = true;
+                startCameraBtn.innerHTML = '📹 Start Camera';
+                stopCameraBtn.innerHTML = '✅ Camera Stopped';
+                detectionStatus.textContent = 'Camera stopped - Click Start Camera to begin';
+                
+                // Stop video stream
+                videoStream.src = '';
+                videoStream.style.display = 'none';
+                
+                // Update camera info
+                cameraStatus.textContent = 'Stopped';
+                detectionMode.textContent = 'Waiting for activation';
+                
+                // Remove visual feedback
+                document.querySelector('.video-container').classList.remove('camera-active');
+                
+                // Stop polling for predictions
+                stopPredictionPolling();
+                
+                showStatus('🛑 Camera stopped successfully!', 'success');
+            } else {
+                showStatus('❌ Failed to stop camera: ' + result.message, 'error');
+                stopCameraBtn.disabled = false;
+                stopCameraBtn.innerHTML = '⏹️ Stop Camera';
+            }
+        } catch (error) {
+            showStatus('🌐 Network error. Please try again.', 'error');
+            stopCameraBtn.disabled = false;
+            stopCameraBtn.innerHTML = '⏹️ Stop Camera';
+            console.error('Error stopping camera:', error);
+        }
+    }
+
+    function startPredictionPolling() {
+        predictionInterval = setInterval(async () => {
+            if (!isCameraActive) return;
+            
+            try {
+                const response = await fetch('/get_prediction');
+                const prediction = await response.json();
+                
+                updatePredictionDisplay(prediction);
+            } catch (error) {
+                console.error('Error fetching prediction:', error);
+            }
+        }, 100); // Update every 100ms for smooth real-time updates
+    }
+
+    function stopPredictionPolling() {
+        if (predictionInterval) {
+            clearInterval(predictionInterval);
+            predictionInterval = null;
+        }
         
-        resultSection.style.display = 'block';
-        resultSection.scrollIntoView({ behavior: 'smooth' });
+        // Reset display
+        predictedLetter.textContent = '?';
+        confidence.textContent = '0%';
+        status.textContent = 'Camera stopped';
+        status.className = 'status';
     }
 
-    function showError(message) {
+    function updatePredictionDisplay(prediction) {
+        predictedLetter.textContent = prediction.letter;
+        confidence.textContent = `${prediction.confidence}%`;
+        
+        if (prediction.status === 'success') {
+            status.textContent = '🎯 Hand detected successfully!';
+            status.className = 'status success';
+        } else if (prediction.status === 'No hand detected') {
+            status.textContent = '👋 No hand detected - Make a gesture!';
+            status.className = 'status warning';
+        } else {
+            status.textContent = `⚠️ ${prediction.status}`;
+            status.className = 'status error';
+        }
+    }
+
+    function showStatus(message, type) {
         status.textContent = message;
-        status.className = 'status error';
-        resultSection.style.display = 'block';
-        resultSection.scrollIntoView({ behavior: 'smooth' });
+        status.className = `status ${type}`;
     }
 
-    function resetForm() {
-        previewSection.style.display = 'none';
-        resultSection.style.display = 'none';
-        imageInput.value = '';
-        uploadArea.classList.remove('dragover');
-    }
+    // Handle video stream errors
+    videoStream.addEventListener('error', function() {
+        detectionStatus.textContent = 'Video stream error - Check camera permissions';
+        showStatus('Video stream failed. Please check camera permissions.', 'error');
+        // Reset button states on error
+        startCameraBtn.disabled = false;
+        startCameraBtn.innerHTML = '📹 Start Camera';
+        stopCameraBtn.disabled = true;
+        stopCameraBtn.innerHTML = '⏹️ Stop Camera';
+    });
+
+    // Handle video stream load
+    videoStream.addEventListener('load', function() {
+        detectionStatus.textContent = 'Camera active - Make hand gestures!';
+    });
 
     // Check server health on load
     fetch('/health')
         .then(response => response.json())
         .then(data => {
             if (!data.model_loaded) {
-                showError('Model not loaded. Please try again later.');
+                showStatus('❌ Model not loaded. Please restart the application.', 'error');
+                detectionStatus.textContent = 'Model not available';
+                startCameraBtn.disabled = true;
+                startCameraBtn.innerHTML = '⚠️ Model Not Available';
+            } else {
+                showStatus('✅ System ready! Click Start Camera to begin real-time detection.', 'success');
+                detectionStatus.textContent = 'Ready to start - Click Start Camera';
             }
         })
         .catch(error => {
             console.error('Health check failed:', error);
+            showStatus('🌐 Server connection failed. Please check if the app is running.', 'error');
+            detectionStatus.textContent = 'Connection error';
         });
 });
