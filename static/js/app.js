@@ -8,9 +8,43 @@ document.addEventListener('DOMContentLoaded', function() {
     const status = document.getElementById('status');
     const cameraStatus = document.getElementById('cameraStatus');
     const detectionMode = document.getElementById('detectionMode');
+    const themeSwitcher = document.getElementById('themeSwitcher');
 
     let predictionInterval;
     let isCameraActive = false;
+
+    // Theme Management
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        setTheme(savedTheme);
+    }
+
+    function setTheme(theme) {
+        // Add transition class for smooth theme switching
+        document.body.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        themeSwitcher.textContent = theme === 'dark' ? '☀️' : '🌙';
+        themeSwitcher.title = theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme';
+        
+        // Remove transition after animation completes
+        setTimeout(() => {
+            document.body.style.transition = '';
+        }, 300);
+    }
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+    }
+
+    // Initialize theme
+    initTheme();
+
+    // Theme switcher event listener
+    themeSwitcher.addEventListener('click', toggleTheme);
 
     // Camera control handlers
     startCameraBtn.addEventListener('click', startCamera);
@@ -106,8 +140,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function startPredictionPolling() {
+        // Clear any existing interval first
+        if (predictionInterval) {
+            clearInterval(predictionInterval);
+            predictionInterval = null;
+        }
+        
         predictionInterval = setInterval(async () => {
-            if (!isCameraActive) return;
+            if (!isCameraActive) {
+                clearInterval(predictionInterval);
+                predictionInterval = null;
+                return;
+            }
             
             try {
                 const response = await fetch('/get_prediction');
@@ -116,6 +160,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 updatePredictionDisplay(prediction);
             } catch (error) {
                 console.error('Error fetching prediction:', error);
+                // Stop polling on network errors
+                clearInterval(predictionInterval);
+                predictionInterval = null;
             }
         }, 100); // Update every 100ms for smooth real-time updates
     }
@@ -163,6 +210,9 @@ document.addEventListener('DOMContentLoaded', function() {
         startCameraBtn.innerHTML = '📹 Start Camera';
         stopCameraBtn.disabled = true;
         stopCameraBtn.innerHTML = '⏹️ Stop Camera';
+        // Stop polling on error
+        stopPredictionPolling();
+        isCameraActive = false;
     });
 
     // Handle video stream load
